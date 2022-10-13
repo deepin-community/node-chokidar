@@ -1,0 +1,127 @@
+node-chokidar (3.4.3-3) unstable; urgency=medium
+
+  * Team upload
+  * Disable one test that fails even with a `npm install` (fixes debci)
+
+ -- Xavier Guimard <yadd@debian.org>  Thu, 12 Nov 2020 11:20:35 +0100
+
+node-chokidar (3.4.3-2) unstable; urgency=medium
+
+  * Team upload
+  * Disable tests incompatible with debci machines
+
+ -- Xavier Guimard <yadd@debian.org>  Wed, 28 Oct 2020 21:21:11 +0100
+
+node-chokidar (3.4.3-1) unstable; urgency=medium
+
+  * Team upload
+  * Use dh-sequence-nodejs
+  * New upstream version 3.4.3
+  * Disable test during build (autopkgtest only) (Closes: #973207)
+
+ -- Xavier Guimard <yadd@debian.org>  Tue, 27 Oct 2020 20:41:01 +0100
+
+node-chokidar (3.4.2-2) unstable; urgency=medium
+
+  * Team upload
+  * Increase test timeout (fixes debci)
+
+ -- Xavier Guimard <yadd@debian.org>  Thu, 27 Aug 2020 22:49:05 +0200
+
+node-chokidar (3.4.2-1) unstable; urgency=medium
+
+  * Team upload
+  * Set test timeout to the value given by upstream (Closes: #964667)
+  * New upstream version 3.4.2
+  * Bump debhelper compatibility level to 13
+
+ -- Xavier Guimard <yadd@debian.org>  Mon, 24 Aug 2020 17:18:39 +0200
+
+node-chokidar (3.4.0-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream version 3.4.0
+
+ -- Xavier Guimard <yadd@debian.org>  Mon, 25 May 2020 08:23:54 +0200
+
+node-chokidar (3.3.1-2) unstable; urgency=medium
+
+  * Team upload
+  * Back to unstable
+  * Add empty override_dh_auto_build to avoid pkg-js-tools auto build
+
+ -- Xavier Guimard <yadd@debian.org>  Thu, 13 Feb 2020 11:09:44 +0100
+
+node-chokidar (3.3.1-1) experimental; urgency=medium
+
+  * Team upload
+  * Declare compliance with policy 4.5.0
+  * New upstream version 3.3.1
+  * Require node-readdirp ≥ 3.3.0
+  * Remove patch now included in upstream
+
+ -- Xavier Guimard <yadd@debian.org>  Wed, 05 Feb 2020 14:23:42 +0100
+
+node-chokidar (2.1.6-4) unstable; urgency=medium
+
+  * Team upload
+  * Bump debhelper compatibility level to 12
+  * Declare compliance with policy 4.4.1
+  * Add "Rules-Requires-Root: no"
+  * Remove useless debian/source/options
+  * Add fix for node-sinon ≥ 7
+  * Require node-sinon ≥ 7
+  * Add debian/clean
+
+ -- Xavier Guimard <yadd@debian.org>  Mon, 20 Jan 2020 13:07:58 +0100
+
+node-chokidar (2.1.6-3) unstable; urgency=medium
+
+  * Reupload to unstable
+  * Bump Standards-Version to 4.4.0 (no changes needed)
+  * Update minimum version of pkg-js-tools
+
+ -- Pirate Praveen <praveen@debian.org>  Sun, 04 Aug 2019 10:52:37 +0000
+
+node-chokidar (2.1.6-2) experimental; urgency=medium
+
+  * Tighten dependency on node-anymatch (which fixed missing dependency on
+    node-normalize-path)
+
+ -- Pirate Praveen <praveen@debian.org>  Mon, 29 Jul 2019 19:38:50 +0000
+
+node-chokidar (2.1.6-1) experimental; urgency=medium
+
+  * New upstream version 2.1.6
+  * Fix filenamemangle in watch
+  * Drop build dependency on dh-buildinfo
+  * Add upath as component
+  * Set NODE_PATH to detect embedded modules
+
+ -- Pirate Praveen <praveen@debian.org>  Fri, 31 May 2019 13:28:29 +0530
+
+node-chokidar (1.7.0-3) unstable; urgency=medium
+
+  * Team upload
+  * Declare compliance with policy 4.3.0
+  * Add upstream/metadata
+  * Switch test to pkg-js-tools and increase timeout (Closes: #907766)
+  * Update links to https
+  * Remove unneeded dependency versions
+
+ -- Xavier Guimard <yadd@debian.org>  Thu, 14 Feb 2019 12:52:06 +0100
+
+node-chokidar (1.7.0-2) unstable; urgency=medium
+
+  * Team upload
+  * Fix mocha failure
+  * Bump policy and compat
+  * Move to salsa
+
+ -- Bastien Roucariès <rouca@debian.org>  Fri, 11 May 2018 00:01:44 +0200
+
+node-chokidar (1.7.0-1) unstable; urgency=low
+
+  * Initial release (Closes: #806154)
+
+ -- Pirate Praveen <praveen@debian.org>  Sun, 14 May 2017 22:12:16 +0530
