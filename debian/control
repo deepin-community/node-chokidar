@@ -4,26 +4,27 @@ Uploaders: Pirate Praveen <praveen@debian.org>
 Section: javascript
 Testsuite: autopkgtest-pkg-nodejs
 Priority: optional
-Build-Depends: debhelper-compat (= 13),
-               nodejs <!nocheck>,
-               dh-sequence-nodejs,
-               mocha (>= 4) <!nocheck>,
-               chai <!nocheck>,
-               node-sinon (>= 7) <!nocheck>,
-               node-rimraf (>= 2.4.3) <!nocheck>,
-               node-sinon-chai <!nocheck>,
-               node-setimmediate <!nocheck>,
-               node-is-glob <!nocheck>,
-               node-is-binary-path <!nocheck>,
-               node-anymatch (>= 3.0.3+~2.0.7-2~) <!nocheck>,
-               node-normalize-path  <!nocheck>,
-               node-readdirp (>= 3.3.0) <!nocheck>,
-               node-async-each <!nocheck>,
-               node-braces <!nocheck>,
-               node-path-is-absolute <!nocheck>,
-               node-glob-parent <!nocheck>,
-               node-inherits <!nocheck>
-Standards-Version: 4.5.0
+Build-Depends:
+ chai <!nocheck>
+ , debhelper-compat (= 13)
+ , dh-sequence-nodejs
+ , mocha <!nocheck>
+ , node-anymatch (>= 3.0.3+~2.0.7-2~) <!nocheck>
+ , node-async-each <!nocheck>
+ , node-braces <!nocheck>
+ , node-glob-parent <!nocheck>
+ , node-inherits <!nocheck>
+ , node-is-binary-path <!nocheck>
+ , node-is-glob <!nocheck>
+ , node-normalize-path  <!nocheck>
+ , node-path-is-absolute <!nocheck>
+ , node-readdirp (>= 3.3.0) <!nocheck>
+ , node-rimraf <!nocheck>
+ , node-setimmediate <!nocheck>
+ , node-sinon (>= 7) <!nocheck>
+ , node-sinon-chai <!nocheck>
+ , nodejs <!nocheck>
+Standards-Version: 4.6.0
 Vcs-Browser: https://salsa.debian.org/js-team/node-chokidar
 Vcs-Git: https://salsa.debian.org/js-team/node-chokidar.git
 Homepage: https://github.com/paulmillr/chokidar
@@ -31,18 +32,19 @@ Rules-Requires-Root: no
 
 Package: node-chokidar
 Architecture: all
-Depends: ${misc:Depends},
-         nodejs,
-         node-is-glob,
-         node-is-binary-path,
-         node-anymatch (>= 3.0.3+~2.0.7-2),
-         node-normalize-path,
-         node-readdirp (>= 3.3.0),
-         node-async-each,
-         node-braces,
-         node-path-is-absolute,
-         node-glob-parent,
-         node-inherits
+Depends:
+ ${misc:Depends}
+ , node-anymatch (>= 3.0.3+~2.0.7-2)
+ , node-async-each
+ , node-braces
+ , node-glob-parent
+ , node-inherits
+ , node-is-binary-path
+ , node-is-glob
+ , node-normalize-path
+ , node-path-is-absolute
+ , node-readdirp (>= 3.3.0)
+ , nodejs
 Description: wrapper around watch / watchFile / fsevents
  Chokidar does still rely on the Node.js core fs module, but when using
  fs.watch and fs.watchFile for watching, it normalizes the events it receives,
