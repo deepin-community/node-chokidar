@@ -1,8 +1,8 @@
 Description: disable one test
-Author: Xavier Guimard <yadd@debian.org>
+Author: Yadd <yadd@debian.org>
 Bug-Debian: https://bugs.debian.org/973207
 Forwarded: no
-Last-Update: 2020-10-27
+Last-Update: 2022-05-12
 
 --- a/test.js
 +++ b/test.js
@@ -174,7 +174,7 @@ Last-Update: 2020-10-27
      it('should emit `addDir` event when directory was added', async () => {
        const testDir = getFixturePath('subdir');
        const spy = await aspy(watcher, 'addDir');
-@@ -1044,30 +890,6 @@
+@@ -1046,30 +892,6 @@
        await waitFor([spy.withArgs(EV_UNLINK_DIR)]);
        spy.should.have.been.calledWith(EV_UNLINK_DIR, deepDir);
      });
@@ -205,7 +205,7 @@ Last-Update: 2020-10-27
    });
    describe('watch symlinks', () => {
      if (isWindows) return true;
-@@ -1207,23 +1029,6 @@
+@@ -1226,23 +1048,6 @@
        await waitFor([spy.withArgs(EV_CHANGE)]);
        spy.should.have.been.calledWith(EV_CHANGE, watchedPath);
      });
@@ -229,7 +229,7 @@ Last-Update: 2020-10-27
      it('should emit ready event even when broken symlinks are encountered', async () => {
        const targetDir = getFixturePath('subdir/nonexistent');
        await fs_mkdir(targetDir);
-@@ -1984,31 +1789,6 @@
+@@ -2197,31 +2002,6 @@
          })();
        });
      });
@@ -261,3 +261,12 @@ Last-Update: 2020-10-27
      it('should not prevent the process from exiting', async () => {
        const scriptFile = getFixturePath('script.js');
        const scriptContent = `
+@@ -2289,8 +2069,5 @@
+       describe('fsevents (native extension)', runTests.bind(this, {useFsEvents: true}));
+     }
+   }
+-  if(!isIBMi) {
+-    describe('fs.watch (non-polling)', runTests.bind(this, {usePolling: false, useFsEvents: false}));
+-  }
+   describe('fs.watchFile (polling)', runTests.bind(this, {usePolling: true, interval: 10}));
+ });

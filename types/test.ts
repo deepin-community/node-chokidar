@@ -9,6 +9,8 @@ const watcher = chokidar.watch("file, dir, or glob", {
 const log = console.log.bind(console);
 
 watcher
+  .add('./foo.js')
+  .unwatch('./bar.js')
   .on("add", (path: string) => {
     log("File", path, "has been added");
   })
@@ -50,7 +52,9 @@ watcher.add(["new-file-2", "new-file-3", "**/other-file*"]);
 watcher.unwatch("new-file*");
 
 // Only needed if watching is `persistent: true`.
-watcher.close();
+(async () => {
+  await watcher.close();
+})();
 
 // One-liner
 chokidar

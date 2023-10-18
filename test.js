@@ -12,7 +12,7 @@ const sinon = require('sinon');
 const sinonChai = require('sinon-chai');
 const upath = require('upath');
 
-const {isWindows, isMacos, EV_ALL, EV_READY, EV_ADD, EV_CHANGE, EV_ADD_DIR, EV_UNLINK, EV_UNLINK_DIR, EV_RAW, EV_ERROR}
+const {isWindows, isMacos, isIBMi, EV_ALL, EV_READY, EV_ADD, EV_CHANGE, EV_ADD_DIR, EV_UNLINK, EV_UNLINK_DIR, EV_RAW, EV_ERROR}
     = require('./lib/constants');
 const chokidar = require('.');
 
@@ -519,9 +519,10 @@ const runTests = (baseopts) => {
 
       await delay();
       await fs_rmdir(testPath);
-      await delay();
+      await delay(300);
       await write(testPath, 'file content');
 
+      await delay(300);
       await waitFor([unlinkSpy]);
       unlinkSpy.should.have.been.calledWith(testPath);
       await waitFor([addSpy]);
@@ -610,12 +611,13 @@ const runTests = (baseopts) => {
       await delay();
       await write(safePath, dateNow());
       await fs_rename(safePath, testPath);
-      await delay(100);
+      await delay(300);
       await write(safePath, dateNow());
       await fs_rename(safePath, testPath);
-      await delay(100);
+      await delay(300);
       await write(safePath, dateNow());
       await fs_rename(safePath, testPath);
+      await delay(300);
       await waitFor([spy]);
       spy.withArgs(EV_CHANGE, testPath).should.have.been.calledThrice;
     });
@@ -1134,9 +1136,11 @@ const runTests = (baseopts) => {
     });
     it('should not recurse indefinitely on circular symlinks', async () => {
       await fs_symlink(currentDir, getFixturePath('subdir/circular'));
-      const watcher = chokidar_watch();
-      await waitForWatcher(watcher);
-      // return true;
+      return new Promise((resolve, reject) => {
+        const watcher = chokidar_watch();
+        watcher.on(EV_ERROR, resolve());
+        watcher.on(EV_READY, reject('The watcher becomes ready, although he watches a circular symlink.'));
+      })
     });
     it('should recognize changes following symlinked dirs', async () => {
       const linkedFilePath = sysPath.join(linkedDir, 'change.txt');
@@ -1168,19 +1172,34 @@ const runTests = (baseopts) => {
       spy.should.have.been.calledWith(EV_ADD, linkedDir);
       spy.should.have.been.calledOnce;
     });
+    it('should survive ENOENT for missing symlinks when followSymlinks:false', async () => {
+      options.followSymlinks = false;
+      const targetDir = getFixturePath('subdir/nonexistent');
+      await fs_mkdir(targetDir);
+      await fs_symlink(targetDir, getFixturePath('subdir/broken'));
+      await fs_rmdir(targetDir);
+
+      const watcher = chokidar_watch(getFixturePath('subdir'), options);
+      const spy = await aspy(watcher, EV_ALL);
+
+      spy.should.have.been.calledTwice;
+      spy.should.have.been.calledWith(EV_ADD_DIR, getFixturePath('subdir'));
+      spy.should.have.been.calledWith(EV_ADD, getFixturePath('subdir/add.txt'));
+    });
     it('should watch symlinks within a watched dir as files when followSymlinks:false', async () => {
       options.followSymlinks = false;
       // Create symlink in linkPath
       const linkPath = getFixturePath('link');
       fs.symlinkSync(getFixturePath('subdir'), linkPath);
       const spy = await aspy(chokidar_watch(), EV_ALL);
-      await delay();
+      await delay(300);
       setTimeout(() => {
         fs.writeFileSync(getFixturePath('subdir/add.txt'), dateNow());
         fs.unlinkSync(linkPath);
         fs.symlinkSync(getFixturePath('subdir/add.txt'), linkPath);
       }, options.usePolling ? 1200 : 300);
 
+      await delay(300);
       await waitFor([spy.withArgs(EV_CHANGE, linkPath)]);
       spy.should.not.have.been.calledWith(EV_ADD_DIR, linkPath);
       spy.should.not.have.been.calledWith(EV_ADD, getFixturePath('link/add.txt'));
@@ -1963,74 +1982,6 @@ const runTests = (baseopts) => {
       if (!macosFswatch) spy.should.have.been.calledOnce;
     });
   });
-  describe('close', () => {
-    it('should ignore further events on close', async () => {
-      return new Promise((resolve) => {
-        const spy = sinon.spy();
-        const watcher = chokidar_watch(currentDir, options);
-        watcher.once(EV_ADD, () => {
-          watcher.once(EV_ADD, async () => {
-            await watcher.on(EV_ADD, spy).close();
-            await delay(900);
-            await write(getFixturePath('add.txt'), dateNow());
-            spy.should.not.have.been.called;
-            resolve();
-          });
-        });
-        (async () => {
-          await waitForWatcher(watcher);
-          await write(getFixturePath('add.txt'), 'hello');
-          await fs_unlink(getFixturePath('add.txt'));
-        })();
-      });
-    });
-    it('should not ignore further events on close with existing watchers', async () => {
-      return new Promise((resolve) => {
-        const watcher1 = chokidar_watch(currentDir);
-        const watcher2 = chokidar_watch(currentDir);
-        // The EV_ADD event should be called on the second watcher even if the first watcher is closed
-        watcher2.on(EV_ADD, () => {
-          watcher2.on(EV_ADD, (path) => {
-            if (path.endsWith('add.txt')) {
-              resolve();
-            }
-          })
-        });
-        (async () => {
-          await waitForWatcher(watcher1);
-          await waitForWatcher(watcher2);
-          // Watcher 1 is closed to ensure events only happen on watcher 2
-          await watcher1.close();
-          // Write a new file into the fixtures to test the EV_ADD event
-          await write(getFixturePath('add.txt'), 'hello');
-          // Ensures EV_ADD is called. Immediately removing the file causes it to be skipped
-          await delay(200);
-          await fs_unlink(getFixturePath('add.txt'));
-        })()
-      })
-    });
-    it('should not prevent the process from exiting', async () => {
-      const scriptFile = getFixturePath('script.js');
-      const scriptContent = `
-        const chokidar = require("${__dirname.replace(/\\/g, '\\\\')}");
-        const watcher = chokidar.watch("${scriptFile.replace(/\\/g, '\\\\')}");
-        watcher.on("ready", () => {
-          watcher.close();
-          process.stdout.write("closed");
-        });`;
-      await write(scriptFile, scriptContent);
-      const obj = await exec(`node ${scriptFile}`);
-      const {stdout} = obj;
-      expect(stdout.toString()).to.equal('closed');
-    });
-    it('should always return the same promise', async () => {
-      const watcher = chokidar_watch(currentDir, options);
-      const closePromise = watcher.close();
-      expect(closePromise).to.be.a('promise');
-      expect(watcher.close()).to.be.equal(closePromise);
-      await closePromise;
-    });
-  });
   describe('env variable option override', () => {
     beforeEach(() => {
       // Do not spin up
@@ -2044,7 +1995,6 @@ const runTests = (baseopts) => {
       it('should make options.usePolling `true` when CHOKIDAR_USEPOLLING is set to true', async () => {
         options.usePolling = false;
         process.env.CHOKIDAR_USEPOLLING = 'true';
-
         const watcher = chokidar_watch(currentDir, options);
         await waitForWatcher(watcher);
         watcher.options.usePolling.should.be.true;
@@ -2102,6 +2052,198 @@ const runTests = (baseopts) => {
       });
     }
   });
+  describe('reproduction of bug in issue #1040', () => {
+    it('should detect change on symlink folders when consolidateThreshhold is reach', async () => {
+      const id = subdirId.toString();
+
+      const fixturesPathRel = sysPath.join(FIXTURES_PATH_REL, id, 'test-case-1040');
+      const linkPath = sysPath.join(fixturesPathRel, 'symlinkFolder');
+      await fs_mkdir(sysPath.resolve(linkPath), { recursive: true });
+
+      // Init chokidar
+      const watcher = chokidar.watch([]);
+      const events = [];
+
+      // Add more than 10 folders to cap consolidateThreshhold
+      for (let i = 0 ; i < 20 ; i += 1) {
+        const folderPath = sysPath.join(fixturesPathRel, 'packages', `folder${i}`);
+        await fs_mkdir(sysPath.resolve(folderPath), { recursive: true });
+        const filePath = sysPath.join(folderPath, `file${i}.js`);
+        await write(sysPath.resolve(filePath), 'file content');
+        const symlinkPath = sysPath.join(linkPath, `folder${i}`);
+        await fs_symlink(sysPath.resolve(folderPath), symlinkPath);
+        watcher.add(sysPath.resolve(sysPath.join(symlinkPath, `file${i}.js`)));
+      }
+
+      // Wait to be sure that we have no other event than the update file
+      await delay(300);
+      watcher.on('change', (event, path) =>
+        events.push(`[change] ${event}: ${path}`)
+      );
+
+      // Update a random generated file to fire an event
+      const randomFilePath = sysPath.join(fixturesPathRel, 'packages', 'folder17', 'file17.js');
+      await write(sysPath.resolve(randomFilePath), 'file content changer zeri ezhriez');
+
+      // Wait chokidar watch
+      await delay(300);
+
+      expect(events.length).to.equal(1);
+    })
+  });
+  describe('reproduction of bug in issue #1024', () => {
+    it('should detect changes to folders, even if they were deleted before', async () => {
+      const id = subdirId.toString();
+      const relativeWatcherDir = sysPath.join(FIXTURES_PATH_REL, id, 'test');
+      const watcher = chokidar.watch(relativeWatcherDir, {
+        persistent: true,
+      });
+      try {
+        const events = [];
+        watcher.on('all', (event, path) =>
+          events.push(`[ALL] ${event}: ${path}`)
+        );
+        const testSubDir = sysPath.join(relativeWatcherDir, 'dir');
+        const testSubDirFile = sysPath.join(relativeWatcherDir, 'dir', 'file');
+
+        // Command sequence from https://github.com/paulmillr/chokidar/issues/1042.
+        await delay();
+        await fs_mkdir(relativeWatcherDir);
+        await fs_mkdir(testSubDir);
+        // The following delay is essential otherwise the call of mkdir and rmdir will be equalize
+        await delay(300);
+        await fs_rmdir(testSubDir);
+        // The following delay is essential otherwise the call of rmdir and mkdir will be equalize
+        await delay(300);
+        await fs_mkdir(testSubDir);
+        await delay(300);
+        await write(testSubDirFile, '');
+        await delay(300);
+        
+        chai.assert.deepStrictEqual(events, [
+          `[ALL] addDir: ${sysPath.join('test-fixtures', id, 'test')}`,
+          `[ALL] addDir: ${sysPath.join('test-fixtures', id, 'test', 'dir')}`,
+          `[ALL] unlinkDir: ${sysPath.join('test-fixtures', id, 'test', 'dir')}`,
+          `[ALL] addDir: ${sysPath.join('test-fixtures', id, 'test', 'dir')}`,
+          `[ALL] add: ${sysPath.join('test-fixtures', id, 'test', 'dir', 'file')}`,
+        ]);
+      } finally {
+        watcher.close();
+      }
+    });
+
+    it('should detect changes to symlink folders, even if they were deleted before', async () => {
+      const id = subdirId.toString();
+      const relativeWatcherDir = sysPath.join(FIXTURES_PATH_REL, id, 'test');
+      const linkedRelativeWatcherDir = sysPath.join(FIXTURES_PATH_REL, id, 'test-link');
+      await fs_symlink(sysPath.resolve(relativeWatcherDir), linkedRelativeWatcherDir);
+      const watcher = chokidar.watch(linkedRelativeWatcherDir, {
+        persistent: true,
+      });
+      try {
+        const events = [];
+        watcher.on('all', (event, path) =>
+          events.push(`[ALL] ${event}: ${path}`)
+        );
+        const testSubDir = sysPath.join(relativeWatcherDir, 'dir');
+        const testSubDirFile = sysPath.join(relativeWatcherDir, 'dir', 'file');
+
+        // Command sequence from https://github.com/paulmillr/chokidar/issues/1042.
+        await delay();
+        await fs_mkdir(relativeWatcherDir);
+        await fs_mkdir(testSubDir);
+        // The following delay is essential otherwise the call of mkdir and rmdir will be equalize
+        await delay(300);
+        await fs_rmdir(testSubDir);
+        // The following delay is essential otherwise the call of rmdir and mkdir will be equalize
+        await delay(300);
+        await fs_mkdir(testSubDir);
+        await write(testSubDirFile, '');
+        await delay(300);
+        
+        chai.assert.deepStrictEqual(events, [
+          `[ALL] addDir: ${sysPath.join('test-fixtures', id, 'test-link')}`,
+          `[ALL] addDir: ${sysPath.join('test-fixtures', id, 'test-link', 'dir')}`,
+          `[ALL] unlinkDir: ${sysPath.join('test-fixtures', id, 'test-link', 'dir')}`,
+          `[ALL] addDir: ${sysPath.join('test-fixtures', id, 'test-link', 'dir')}`,
+          `[ALL] add: ${sysPath.join('test-fixtures', id, 'test-link', 'dir', 'file')}`,
+        ]);
+      } finally {
+        watcher.close();
+      }
+    });
+  });
+
+  describe('close', () => {
+    it('should ignore further events on close', async () => {
+      return new Promise((resolve) => {
+        const spy = sinon.spy();
+        const watcher = chokidar_watch(currentDir, options);
+        watcher.once(EV_ADD, () => {
+          watcher.once(EV_ADD, async () => {
+            await watcher.on(EV_ADD, spy).close();
+            await delay(900);
+            await write(getFixturePath('add.txt'), dateNow());
+            spy.should.not.have.been.called;
+            resolve();
+          });
+        });
+        (async () => {
+          await waitForWatcher(watcher);
+          await delay(300);
+          await write(getFixturePath('add.txt'), 'hello');
+          await delay(300);
+          await fs_unlink(getFixturePath('add.txt'));
+        })();
+      });
+    });
+    it('should not ignore further events on close with existing watchers', async () => {
+      return new Promise((resolve) => {
+        const watcher1 = chokidar_watch(currentDir);
+        const watcher2 = chokidar_watch(currentDir);
+        // The EV_ADD event should be called on the second watcher even if the first watcher is closed
+        watcher2.on(EV_ADD, () => {
+          watcher2.on(EV_ADD, (path) => {
+            if (path.endsWith('add.txt')) {
+              resolve();
+            }
+          })
+        });
+        (async () => {
+          await waitForWatcher(watcher1);
+          await waitForWatcher(watcher2);
+          // Watcher 1 is closed to ensure events only happen on watcher 2
+          await watcher1.close();
+          // Write a new file into the fixtures to test the EV_ADD event
+          await write(getFixturePath('add.txt'), 'hello');
+          // Ensures EV_ADD is called. Immediately removing the file causes it to be skipped
+          await delay(200);
+          await fs_unlink(getFixturePath('add.txt'));
+        })()
+      })
+    });
+    it('should not prevent the process from exiting', async () => {
+      const scriptFile = getFixturePath('script.js');
+      const scriptContent = `
+        const chokidar = require("${__dirname.replace(/\\/g, '\\\\')}");
+        const watcher = chokidar.watch("${scriptFile.replace(/\\/g, '\\\\')}");
+        watcher.on("ready", () => {
+          watcher.close();
+          process.stdout.write("closed");
+        });`;
+      await write(scriptFile, scriptContent);
+      const obj = await exec(`node ${scriptFile}`);
+      const {stdout} = obj;
+      expect(stdout.toString()).to.equal('closed');
+    });
+    it('should always return the same promise', async () => {
+      const watcher = chokidar_watch(currentDir, options);
+      const closePromise = watcher.close();
+      expect(closePromise).to.be.a('promise');
+      expect(watcher.close()).to.be.equal(closePromise);
+      await closePromise;
+    });
+  });
 };
 
 describe('chokidar', () => {
@@ -2147,6 +2289,8 @@ describe('chokidar', () => {
       describe('fsevents (native extension)', runTests.bind(this, {useFsEvents: true}));
     }
   }
-  describe('fs.watch (non-polling)', runTests.bind(this, {usePolling: false, useFsEvents: false}));
+  if(!isIBMi) {
+    describe('fs.watch (non-polling)', runTests.bind(this, {usePolling: false, useFsEvents: false}));
+  }
   describe('fs.watchFile (polling)', runTests.bind(this, {usePolling: true, interval: 10}));
 });
